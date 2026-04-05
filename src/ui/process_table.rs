@@ -3,12 +3,47 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, Cell, Row, Table};
 
+use crate::app::SortColumn;
 use crate::model::ProcessGpuUsage;
 
-pub fn draw(frame: &mut Frame, area: Rect, processes: &[ProcessGpuUsage], selected: usize) {
-    let header_cells = ["PID", "COMMAND", "GTT", "RCS", "VCS", "CCS", "BCS", "VECS"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
+pub fn draw(
+    frame: &mut Frame,
+    area: Rect,
+    processes: &[ProcessGpuUsage],
+    selected: usize,
+    sort_column: SortColumn,
+    sort_reverse: bool,
+) {
+    let sort_indicator = if sort_reverse { "▼" } else { "▲" };
+
+    let header_names = [
+        ("PID", SortColumn::Pid),
+        ("COMMAND", SortColumn::Command),
+        ("GTT", SortColumn::Gtt),
+        ("RCS", SortColumn::Rcs),
+        ("VCS", SortColumn::Vcs),
+        ("CCS", SortColumn::Ccs),
+        ("BCS", SortColumn::Bcs),
+        ("VECS", SortColumn::Vecs),
+    ];
+
+    let header_cells = header_names.iter().map(|(name, col)| {
+        let label = if *col == sort_column {
+            format!("{name}{sort_indicator}")
+        } else {
+            name.to_string()
+        };
+        let style = if *col == sort_column {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+        } else {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        };
+        Cell::from(label).style(style)
+    });
     let header = Row::new(header_cells).height(1);
 
     let rows = processes.iter().enumerate().map(|(i, p)| {
@@ -20,7 +55,6 @@ pub fn draw(frame: &mut Frame, area: Rect, processes: &[ProcessGpuUsage], select
             Cell::from(format!("{:>7}", gtt_str)),
         ];
 
-        // Engine columns in order: rcs, vcs, ccs, bcs, vecs
         for name in &["rcs", "vcs", "ccs", "bcs", "vecs"] {
             let pct = p
                 .engine_utils
@@ -64,7 +98,10 @@ pub fn draw(frame: &mut Frame, area: Rect, processes: &[ProcessGpuUsage], select
         .header(header)
         .block(
             Block::default()
-                .title(format!(" Processes ({}) ", processes.len()))
+                .title(format!(
+                    " Processes ({}) [s:sort r:reverse] ",
+                    processes.len()
+                ))
                 .borders(Borders::ALL),
         );
 
@@ -85,7 +122,6 @@ fn truncate(s: &str, max: usize) -> &str {
     if s.len() <= max {
         return s;
     }
-    // Find a valid UTF-8 boundary at or before `max`.
     let mut end = max;
     while end > 0 && !s.is_char_boundary(end) {
         end -= 1;
