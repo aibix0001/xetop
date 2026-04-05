@@ -1978,6 +1978,7 @@ dependencies = [
  "anyhow",
  "clap",
  "crossterm 0.28.1",
+ "libc",
  "log",
  "nix",
  "ratatui",

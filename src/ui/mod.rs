@@ -1,3 +1,4 @@
+pub mod engine_panel;
 pub mod gpu_panel;
 pub mod npu_panel;
 pub mod power_bar;
@@ -13,10 +14,11 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
     let chunks = Layout::vertical([
-        Constraint::Length(1), // title bar
-        Constraint::Length(6), // GPU + NPU panels side by side
-        Constraint::Length(1), // power bar
-        Constraint::Min(1),   // placeholder for future panels
+        Constraint::Length(1),  // title bar
+        Constraint::Length(6),  // GPU + NPU panels side by side
+        Constraint::Length(1),  // power bar
+        Constraint::Length(7),  // engine panel
+        Constraint::Min(1),    // placeholder for process table
     ])
     .split(area);
 
@@ -41,12 +43,15 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // Power bar
     power_bar::draw(frame, chunks[2], &app.rapl);
 
-    // Placeholder for engine panel + process table (future phases)
-    let placeholder = Paragraph::new("  Engine utilization and process table coming soon...")
+    // Engine utilization panel
+    engine_panel::draw(frame, chunks[3], &app.engines, app.pmu_available);
+
+    // Placeholder for process table (Phase 4)
+    let placeholder = Paragraph::new("  Per-process GPU usage coming soon...")
         .block(
             Block::default()
-                .title(" Details ")
+                .title(" Processes ")
                 .borders(Borders::ALL),
         );
-    frame.render_widget(placeholder, chunks[3]);
+    frame.render_widget(placeholder, chunks[4]);
 }
