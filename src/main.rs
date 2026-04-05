@@ -71,7 +71,11 @@ fn main() -> Result<()> {
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let _ = disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+        let _ = execute!(
+            io::stdout(),
+            LeaveAlternateScreen,
+            crossterm::cursor::Show
+        );
         original_hook(panic_info);
     }));
 
@@ -153,7 +157,7 @@ fn run_once(app: &mut App) -> Result<()> {
     // Processes
     if !app.processes.is_empty() {
         println!(
-            "{:<7} {:<16} {:>7}  {:>5}  {:>5}  {:>5}  {:>5}  {:>5}",
+            "{:<7} {:<16} {:>7}  {:>6}  {:>6}  {:>6}  {:>6}  {:>6}",
             "PID", "COMMAND", "GTT", "RCS", "VCS", "CCS", "BCS", "VECS"
         );
         for p in &app.processes {
@@ -170,7 +174,7 @@ fn run_once(app: &mut App) -> Result<()> {
                     .unwrap_or(0.0)
             };
             println!(
-                "{:<7} {:<16} {:>7}  {:>4.1}%  {:>4.1}%  {:>4.1}%  {:>4.1}%  {:>4.1}%",
+                "{:<7} {:<16} {:>7}  {:>5.1}%  {:>5.1}%  {:>5.1}%  {:>5.1}%  {:>5.1}%",
                 p.pid,
                 &p.command,
                 gtt,
