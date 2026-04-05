@@ -66,7 +66,7 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
         frame.render_widget(Paragraph::new(freq_line), chunks[row_freq]);
 
         // Utilization gauge (100% - C6 idle residency)
-        let util_pct = (100.0 - gt.c6_residency_pct).clamp(0.0, 100.0);
+        let util_pct = gt.utilization_pct.clamp(0.0, 100.0);
         let color = if util_pct >= 80.0 {
             Color::Red
         } else if util_pct >= 50.0 {

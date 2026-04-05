@@ -14,6 +14,8 @@ pub struct GtState {
     pub min_freq_mhz: u32,
     pub max_freq_mhz: u32,
     pub idle_status: String,
+    /// GT utilization percentage (best available source).
+    pub utilization_pct: f64,
     /// C6 residency percentage (computed from deltas).
     pub c6_residency_pct: f64,
     /// Raw cumulative idle_residency_ms for delta computation.

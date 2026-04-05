@@ -70,6 +70,7 @@ impl SysfsCollector {
                 idle_status: read_sysfs(&idle_path.join("idle_status")).unwrap_or_default(),
                 idle_residency_ms: read_sysfs_value(&idle_path.join("idle_residency_ms"))
                     .unwrap_or(0),
+                utilization_pct: 0.0,
                 c6_residency_pct: 0.0,
             };
 

@@ -121,8 +121,8 @@ fn run_once(app: &mut App) -> Result<()> {
     for gt in &app.gpu.gts {
         let label = if gt.id == 0 { "render/compute" } else { "media" };
         println!(
-            "GT{} ({}): act={} MHz, max={} MHz, C6={:.1}% [{}]",
-            gt.id, label, gt.act_freq_mhz, gt.max_freq_mhz, gt.c6_residency_pct, gt.idle_status
+            "GT{} ({}): act={} MHz, max={} MHz, util={:.1}%",
+            gt.id, label, gt.act_freq_mhz, gt.max_freq_mhz, gt.utilization_pct
         );
     }
     println!();
