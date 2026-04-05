@@ -9,6 +9,7 @@ pub struct RingBuffer {
 
 impl RingBuffer {
     pub fn new(capacity: usize) -> Self {
+        let capacity = capacity.max(1);
         Self {
             data: vec![0; capacity],
             capacity,
@@ -27,7 +28,7 @@ impl RingBuffer {
     }
 
     /// Return data in chronological order for sparkline rendering.
-    pub fn as_slice(&self) -> Vec<u64> {
+    pub fn to_vec(&self) -> Vec<u64> {
         if self.len < self.capacity {
             self.data[..self.len].to_vec()
         } else {

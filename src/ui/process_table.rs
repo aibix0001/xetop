@@ -14,7 +14,7 @@ pub fn draw(
     sort_column: SortColumn,
     sort_reverse: bool,
 ) {
-    let sort_indicator = if sort_reverse { "▼" } else { "▲" };
+    let sort_indicator = if sort_reverse { "▼" } else { "▲" }; // ▼ = descending (highest first)
 
     let header_names = [
         ("PID", SortColumn::Pid),
@@ -98,10 +98,7 @@ pub fn draw(
         .header(header)
         .block(
             Block::default()
-                .title(format!(
-                    " Processes ({}) [s:sort r:reverse] ",
-                    processes.len()
-                ))
+                .title(format!(" Processes ({}) ", processes.len()))
                 .borders(Borders::ALL),
         );
 

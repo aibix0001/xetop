@@ -65,7 +65,7 @@ pub fn draw(
 
         // Sparkline from history.
         if let Some(hist) = history.get(&engine.name) {
-            let data = hist.as_slice();
+            let data = hist.to_vec();
             let sparkline = Sparkline::default()
                 .data(&data)
                 .max(100)

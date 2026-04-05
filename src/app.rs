@@ -124,8 +124,13 @@ impl App {
         }
         self.npu_history.push(self.npu.utilization_pct);
 
-        // Sort processes.
+        // Sort processes and clamp selection.
         self.sort_processes();
+        if !self.processes.is_empty() {
+            self.selected_process = self.selected_process.min(self.processes.len() - 1);
+        } else {
+            self.selected_process = 0;
+        }
     }
 
     fn sort_processes(&mut self) {
@@ -185,9 +190,11 @@ impl App {
                     }
                     KeyCode::Char('s') => {
                         self.sort_column = self.sort_column.next();
+                        self.selected_process = 0;
                     }
                     KeyCode::Char('r') => {
                         self.sort_reverse = !self.sort_reverse;
+                        self.selected_process = 0;
                     }
                     _ => {}
                 }
