@@ -1,3 +1,7 @@
+pub mod gpu_panel;
+pub mod npu_panel;
+pub mod power_bar;
+
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
@@ -9,8 +13,10 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
     let chunks = Layout::vertical([
-        Constraint::Length(3), // title bar
-        Constraint::Min(1),   // main content placeholder
+        Constraint::Length(1), // title bar
+        Constraint::Length(6), // GPU + NPU panels side by side
+        Constraint::Length(1), // power bar
+        Constraint::Min(1),   // placeholder for future panels
     ])
     .split(area);
 
@@ -19,17 +25,28 @@ pub fn draw(frame: &mut Frame, app: &App) {
         " xetop — Intel Xe GPU & NPU Monitor | tick: {}",
         app.tick_count
     ))
-    .style(Style::default().fg(Color::Cyan))
-    .block(Block::default().borders(Borders::BOTTOM));
-
+    .style(Style::default().fg(Color::Cyan));
     frame.render_widget(title, chunks[0]);
 
-    // Placeholder
-    let placeholder = Paragraph::new("  Waiting for data collectors... (press 'q' to quit)")
+    // GPU + NPU panels side by side
+    let panels = Layout::horizontal([
+        Constraint::Percentage(50),
+        Constraint::Percentage(50),
+    ])
+    .split(chunks[1]);
+
+    gpu_panel::draw(frame, panels[0], &app.gpu);
+    npu_panel::draw(frame, panels[1], &app.npu);
+
+    // Power bar
+    power_bar::draw(frame, chunks[2], &app.rapl);
+
+    // Placeholder for engine panel + process table (future phases)
+    let placeholder = Paragraph::new("  Engine utilization and process table coming soon...")
         .block(
             Block::default()
-                .title(" Status ")
+                .title(" Details ")
                 .borders(Borders::ALL),
         );
-    frame.render_widget(placeholder, chunks[1]);
+    frame.render_widget(placeholder, chunks[3]);
 }

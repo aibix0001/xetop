@@ -1,4 +1,5 @@
 mod app;
+mod collectors;
 mod model;
 mod ui;
 
@@ -16,6 +17,8 @@ use ratatui::backend::CrosstermBackend;
 use simplelog::{Config, WriteLogger};
 
 use crate::app::App;
+use crate::collectors::rapl::RaplCollector;
+use crate::collectors::sysfs::{SysfsCollector, find_npu_device, find_xe_device};
 
 #[derive(Parser)]
 #[command(name = "xetop", about = "Intel Xe GPU & NPU monitor")]
@@ -38,6 +41,17 @@ fn main() -> Result<()> {
         WriteLogger::init(LevelFilter::Debug, Config::default(), file)?;
     }
 
+    // Discover devices
+    let drm_device = find_xe_device()?;
+    let npu_device = find_npu_device();
+
+    log::info!("xe device: {}", drm_device.display());
+    log::info!("NPU device: {}", npu_device.display());
+
+    // Initialize collectors
+    let sysfs = SysfsCollector::new(&drm_device, &npu_device);
+    let rapl = RaplCollector::new();
+
     // Terminal setup
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -46,7 +60,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Run application
-    let mut app = App::new(cli.interval);
+    let mut app = App::new(cli.interval, sysfs, rapl);
     let result = run_app(&mut terminal, &mut app);
 
     // Terminal teardown (always runs)

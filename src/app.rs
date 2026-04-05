@@ -3,6 +3,8 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 
+use crate::collectors::rapl::RaplCollector;
+use crate::collectors::sysfs::SysfsCollector;
 use crate::model::{GpuState, NpuState, RaplState};
 
 pub struct App {
@@ -14,10 +16,12 @@ pub struct App {
     pub rapl: RaplState,
     pub processes: Vec<crate::model::ProcessGpuUsage>,
     pub engines: Vec<crate::model::EngineMetrics>,
+    sysfs: SysfsCollector,
+    rapl_collector: RaplCollector,
 }
 
 impl App {
-    pub fn new(interval_ms: u64) -> Self {
+    pub fn new(interval_ms: u64, sysfs: SysfsCollector, rapl_collector: RaplCollector) -> Self {
         Self {
             running: true,
             tick_count: 0,
@@ -27,11 +31,16 @@ impl App {
             rapl: RaplState::default(),
             processes: Vec::new(),
             engines: Vec::new(),
+            sysfs,
+            rapl_collector,
         }
     }
 
     pub fn tick(&mut self) {
         self.tick_count += 1;
+        self.gpu = self.sysfs.collect_gpu();
+        self.npu = self.sysfs.collect_npu();
+        self.rapl = self.rapl_collector.collect();
     }
 
     pub fn handle_events(&mut self) -> Result<()> {
