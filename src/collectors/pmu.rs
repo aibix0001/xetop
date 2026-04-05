@@ -94,17 +94,21 @@ impl PmuCollector {
             let active_config = build_config(EVENT_ACTIVE_TICKS, engine_class, engine_instance, gt_id as u64);
             let total_config = build_config(EVENT_TOTAL_TICKS, engine_class, engine_instance, gt_id as u64);
 
-            let active_fd = perf_event_open(pmu_type, active_config)
-                .with_context(|| format!("failed to open PMU event for {name} active"))?;
-            let total_fd = perf_event_open(pmu_type, total_config)
-                .with_context(|| format!("failed to open PMU event for {name} total"))?;
+            let active_fd = PerfEventFd {
+                fd: perf_event_open(pmu_type, active_config)
+                    .with_context(|| format!("failed to open PMU event for {name} active"))?,
+            };
+            let total_fd = PerfEventFd {
+                fd: perf_event_open(pmu_type, total_config)
+                    .with_context(|| format!("failed to open PMU event for {name} total"))?,
+            };
 
             engines.push(EngineCounters {
                 name: name.to_string(),
                 label: label.to_string(),
                 gt_id,
-                active_fd: PerfEventFd { fd: active_fd },
-                total_fd: PerfEventFd { fd: total_fd },
+                active_fd,
+                total_fd,
             });
         }
 
