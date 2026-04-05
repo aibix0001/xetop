@@ -28,10 +28,7 @@ struct PerfEventFd {
 
 impl PerfEventFd {
     fn read_value(&self) -> io::Result<u64> {
-        // perf event fds don't support pread — must lseek + read.
-        if unsafe { libc::lseek(self.fd, 0, libc::SEEK_SET) } < 0 {
-            return Err(io::Error::last_os_error());
-        }
+        // perf event fds reset position on each read — just read directly.
         let mut buf = [0u8; 8];
         let ret = unsafe {
             libc::read(
