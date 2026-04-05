@@ -17,6 +17,7 @@ use ratatui::backend::CrosstermBackend;
 use simplelog::{Config, WriteLogger};
 
 use crate::app::App;
+use crate::collectors::fdinfo::FdinfoCollector;
 use crate::collectors::pmu::PmuCollector;
 use crate::collectors::rapl::RaplCollector;
 use crate::collectors::sysfs::{SysfsCollector, find_npu_device, find_xe_device};
@@ -53,6 +54,7 @@ fn main() -> Result<()> {
     let sysfs = SysfsCollector::new(&drm_device, &npu_device);
     let rapl = RaplCollector::new();
     let pmu = PmuCollector::new();
+    let fdinfo = FdinfoCollector::new(2); // scan every 2nd tick
 
     // Terminal setup
     enable_raw_mode()?;
@@ -62,7 +64,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Run application
-    let mut app = App::new(cli.interval, sysfs, rapl, pmu);
+    let mut app = App::new(cli.interval, sysfs, rapl, pmu, fdinfo);
     let result = run_app(&mut terminal, &mut app);
 
     // Terminal teardown (always runs)

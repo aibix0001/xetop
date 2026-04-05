@@ -1,3 +1,4 @@
+pub mod fdinfo;
 pub mod pmu;
 pub mod rapl;
 pub mod sysfs;

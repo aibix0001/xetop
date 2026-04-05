@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 
+use crate::collectors::fdinfo::FdinfoCollector;
 use crate::collectors::pmu::PmuCollector;
 use crate::collectors::rapl::RaplCollector;
 use crate::collectors::sysfs::SysfsCollector;
@@ -18,9 +19,11 @@ pub struct App {
     pub processes: Vec<ProcessGpuUsage>,
     pub engines: Vec<EngineMetrics>,
     pub pmu_available: bool,
+    pub selected_process: usize,
     sysfs: SysfsCollector,
     rapl_collector: RaplCollector,
     pmu: PmuCollector,
+    fdinfo: FdinfoCollector,
 }
 
 impl App {
@@ -29,6 +32,7 @@ impl App {
         sysfs: SysfsCollector,
         rapl_collector: RaplCollector,
         pmu: PmuCollector,
+        fdinfo: FdinfoCollector,
     ) -> Self {
         let pmu_available = pmu.available;
         Self {
@@ -41,9 +45,11 @@ impl App {
             processes: Vec::new(),
             engines: Vec::new(),
             pmu_available,
+            selected_process: 0,
             sysfs,
             rapl_collector,
             pmu,
+            fdinfo,
         }
     }
 
@@ -53,6 +59,7 @@ impl App {
         self.npu = self.sysfs.collect_npu();
         self.rapl = self.rapl_collector.collect();
         self.engines = self.pmu.collect();
+        self.processes = self.fdinfo.collect();
     }
 
     pub fn handle_events(&mut self) -> Result<()> {
@@ -74,6 +81,15 @@ impl App {
             {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => self.running = false,
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        self.selected_process = self.selected_process.saturating_sub(1);
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if !self.processes.is_empty() {
+                            self.selected_process =
+                                (self.selected_process + 1).min(self.processes.len() - 1);
+                        }
+                    }
                     _ => {}
                 }
             }
