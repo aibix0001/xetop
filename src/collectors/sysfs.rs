@@ -27,10 +27,10 @@ impl SysfsCollector {
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
-                if let Some(id_str) = name.strip_prefix("gt") {
-                    if let Ok(id) = id_str.parse::<u32>() {
-                        gt_ids.push(id);
-                    }
+                if let Some(id_str) = name.strip_prefix("gt")
+                    && let Ok(id) = id_str.parse::<u32>()
+                {
+                    gt_ids.push(id);
                 }
             }
         }
@@ -170,10 +170,10 @@ pub fn find_xe_device() -> Result<PathBuf> {
         }
         let device_path = entry.path().join("device");
         let driver_link = device_path.join("driver");
-        if let Ok(target) = std::fs::read_link(&driver_link) {
-            if target.to_string_lossy().ends_with("/xe") {
-                return Ok(device_path);
-            }
+        if let Ok(target) = std::fs::read_link(&driver_link)
+            && target.to_string_lossy().ends_with("/xe")
+        {
+            return Ok(device_path);
         }
     }
     anyhow::bail!("no xe GPU device found in /sys/class/drm/")
