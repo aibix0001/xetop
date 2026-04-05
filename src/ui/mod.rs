@@ -2,11 +2,12 @@ pub mod engine_panel;
 pub mod gpu_panel;
 pub mod npu_panel;
 pub mod power_bar;
+pub mod process_table;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::Paragraph;
 
 use crate::app::App;
 
@@ -18,7 +19,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Constraint::Length(6),  // GPU + NPU panels side by side
         Constraint::Length(1),  // power bar
         Constraint::Length(7),  // engine panel
-        Constraint::Min(1),    // placeholder for process table
+        Constraint::Min(5),    // process table
     ])
     .split(area);
 
@@ -46,12 +47,6 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // Engine utilization panel
     engine_panel::draw(frame, chunks[3], &app.engines, app.pmu_available);
 
-    // Placeholder for process table (Phase 4)
-    let placeholder = Paragraph::new("  Per-process GPU usage coming soon...")
-        .block(
-            Block::default()
-                .title(" Processes ")
-                .borders(Borders::ALL),
-        );
-    frame.render_widget(placeholder, chunks[4]);
+    // Process table
+    process_table::draw(frame, chunks[4], &app.processes, app.selected_process);
 }
