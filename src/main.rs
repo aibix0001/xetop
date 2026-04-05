@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     let sysfs = SysfsCollector::new(&drm_device, &npu_device);
     let rapl = RaplCollector::new();
     let pmu = PmuCollector::new();
-    let fdinfo = FdinfoCollector::new(2);
+    let fdinfo = FdinfoCollector::new(1); // scan every tick
 
     let mut app = App::new(cli.interval, sysfs, rapl, pmu, fdinfo);
 
@@ -98,6 +98,9 @@ fn main() -> Result<()> {
 }
 
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> Result<()> {
+    // Collect initial baseline so first frame isn't empty.
+    app.tick();
+
     while app.running {
         terminal.draw(|frame| ui::draw(frame, app))?;
         app.handle_events()?;
