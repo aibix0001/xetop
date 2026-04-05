@@ -1,5 +1,6 @@
 mod app;
 mod collectors;
+mod history;
 mod model;
 mod ui;
 
