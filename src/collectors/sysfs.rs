@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use anyhow::Result;
 use log::warn;
@@ -11,8 +12,9 @@ pub struct SysfsCollector {
     npu_device_path: PathBuf,
     gt_ids: Vec<u32>,
     prev_gt_residency: Vec<(u32, u64)>,
-    prev_npu_busy_us: u64,
-    prev_timestamp_us: u64,
+    prev_gpu_timestamp: Option<Instant>,
+    prev_npu_busy_us: Option<u64>,
+    prev_npu_timestamp: Option<Instant>,
     npu_available: bool,
 }
 
@@ -44,8 +46,9 @@ impl SysfsCollector {
             npu_device_path: npu_device_path.to_path_buf(),
             gt_ids,
             prev_gt_residency: Vec::new(),
-            prev_npu_busy_us: 0,
-            prev_timestamp_us: 0,
+            prev_gpu_timestamp: None,
+            prev_npu_busy_us: None,
+            prev_npu_timestamp: None,
             npu_available,
         }
     }
@@ -73,23 +76,23 @@ impl SysfsCollector {
             gts.push(gt);
         }
 
-        // Compute C6 residency deltas.
         self.compute_c6_deltas(&mut gts);
 
         GpuState { gts }
     }
 
     fn compute_c6_deltas(&mut self, gts: &mut [GtState]) {
-        let now_ms = now_ms();
+        let now = Instant::now();
 
-        if self.prev_gt_residency.is_empty() {
+        let Some(prev_ts) = self.prev_gpu_timestamp else {
             // First sample — store baseline.
-            self.prev_gt_residency = gts.iter().map(|gt| (gt.id, gt.idle_residency_ms)).collect();
-            self.prev_timestamp_us = now_ms * 1000;
+            self.prev_gt_residency =
+                gts.iter().map(|gt| (gt.id, gt.idle_residency_ms)).collect();
+            self.prev_gpu_timestamp = Some(now);
             return;
-        }
+        };
 
-        let elapsed_ms = now_ms.saturating_sub(self.prev_timestamp_us / 1000);
+        let elapsed_ms = now.duration_since(prev_ts).as_millis() as u64;
         if elapsed_ms == 0 {
             return;
         }
@@ -101,12 +104,14 @@ impl SysfsCollector {
                 .find(|(id, _)| *id == gt.id)
             {
                 let delta = gt.idle_residency_ms.saturating_sub(prev.1);
-                gt.c6_residency_pct = (delta as f64 / elapsed_ms as f64 * 100.0).clamp(0.0, 100.0);
+                gt.c6_residency_pct =
+                    (delta as f64 / elapsed_ms as f64 * 100.0).clamp(0.0, 100.0);
             }
         }
 
-        self.prev_gt_residency = gts.iter().map(|gt| (gt.id, gt.idle_residency_ms)).collect();
-        self.prev_timestamp_us = now_ms * 1000;
+        self.prev_gt_residency =
+            gts.iter().map(|gt| (gt.id, gt.idle_residency_ms)).collect();
+        self.prev_gpu_timestamp = Some(now);
     }
 
     pub fn collect_npu(&mut self) -> NpuState {
@@ -116,33 +121,32 @@ impl SysfsCollector {
 
         let dev = &self.npu_device_path;
 
-        let busy_time_us: u64 =
-            read_sysfs_value(&dev.join("npu_busy_time_us")).unwrap_or(0);
+        let busy_time_us: u64 = read_sysfs_value(&dev.join("npu_busy_time_us")).unwrap_or(0);
         let cur_freq_mhz: u32 =
             read_sysfs_value(&dev.join("npu_current_frequency_mhz")).unwrap_or(0);
         let max_freq_mhz: u32 =
             read_sysfs_value(&dev.join("npu_max_frequency_mhz")).unwrap_or(0);
         let memory_bytes: u64 =
             read_sysfs_value(&dev.join("npu_memory_utilization")).unwrap_or(0);
-        let power_state: String =
-            read_sysfs(&dev.join("power_state")).unwrap_or_default();
+        let power_state: String = read_sysfs(&dev.join("power_state")).unwrap_or_default();
 
-        let now = now_us();
-        let utilization_pct = if self.prev_npu_busy_us > 0 && self.prev_timestamp_us > 0 {
-            let delta_busy = busy_time_us.saturating_sub(self.prev_npu_busy_us);
-            let delta_time = now.saturating_sub(self.prev_timestamp_us);
-            if delta_time > 0 {
-                (delta_busy as f64 / delta_time as f64 * 100.0).clamp(0.0, 100.0)
+        let now = Instant::now();
+        let utilization_pct =
+            if let (Some(prev_busy), Some(prev_ts)) = (self.prev_npu_busy_us, self.prev_npu_timestamp)
+            {
+                let delta_busy = busy_time_us.saturating_sub(prev_busy);
+                let delta_time = now.duration_since(prev_ts).as_micros() as u64;
+                if delta_time > 0 {
+                    (delta_busy as f64 / delta_time as f64 * 100.0).clamp(0.0, 100.0)
+                } else {
+                    0.0
+                }
             } else {
                 0.0
-            }
-        } else {
-            0.0
-        };
+            };
 
-        self.prev_npu_busy_us = busy_time_us;
-        // Note: prev_timestamp_us is also used by GPU C6 — this is fine since
-        // both are called in the same tick.
+        self.prev_npu_busy_us = Some(busy_time_us);
+        self.prev_npu_timestamp = Some(now);
 
         NpuState {
             cur_freq_mhz,
@@ -192,18 +196,4 @@ pub fn find_npu_device() -> PathBuf {
     }
     // Return a path that won't exist — collector will disable NPU.
     PathBuf::from("/sys/class/accel/accel0/device")
-}
-
-fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64
-}
-
-fn now_us() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_micros() as u64
 }

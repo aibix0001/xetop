@@ -36,8 +36,9 @@ pub struct NpuState {
 pub struct EngineMetrics {
     pub name: String,
     pub label: String,
-    pub active_ticks: u64,
-    pub total_ticks: u64,
+    pub gt_id: u32,
+    pub active_cycles: u64,
+    pub total_cycles: u64,
     pub utilization_pct: f64,
 }
 

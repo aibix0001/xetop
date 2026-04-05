@@ -10,6 +10,8 @@ pub struct RaplCollector {
     pkg_path: PathBuf,
     core_path: PathBuf,
     dram_path: PathBuf,
+    /// Maximum energy counter value before wrap-around.
+    max_energy_uj: u64,
     prev: Option<RaplSnapshot>,
     available: bool,
 }
@@ -29,10 +31,14 @@ impl RaplCollector {
             warn!("RAPL not available at {}", base.display());
         }
 
+        let max_energy_uj: u64 =
+            read_sysfs_value(&base.join("max_energy_range_uj")).unwrap_or(u64::MAX);
+
         Self {
             pkg_path: base.join("energy_uj"),
             core_path: base.join("intel-rapl:0:0/energy_uj"),
             dram_path: base.join("intel-rapl:0:1/energy_uj"),
+            max_energy_uj,
             prev: None,
             available,
         }
@@ -51,10 +57,11 @@ impl RaplCollector {
         let (pkg_watts, core_watts, dram_watts) = if let Some(prev) = &self.prev {
             let dt = now.duration_since(prev.timestamp).as_secs_f64();
             if dt > 0.0 {
+                let max = self.max_energy_uj;
                 (
-                    delta_watts(pkg_uj, prev.pkg_uj, dt),
-                    delta_watts(core_uj, prev.core_uj, dt),
-                    delta_watts(dram_uj, prev.dram_uj, dt),
+                    delta_watts(pkg_uj, prev.pkg_uj, dt, max),
+                    delta_watts(core_uj, prev.core_uj, dt, max),
+                    delta_watts(dram_uj, prev.dram_uj, dt, max),
                 )
             } else {
                 (0.0, 0.0, 0.0)
@@ -81,13 +88,13 @@ impl RaplCollector {
     }
 }
 
-/// Compute watts from energy counter delta, handling overflow of the RAPL register.
-fn delta_watts(current: u64, previous: u64, dt_secs: f64) -> f64 {
+/// Compute watts from energy counter delta, handling overflow at `max_energy_uj`.
+fn delta_watts(current: u64, previous: u64, dt_secs: f64, max_energy_uj: u64) -> f64 {
     let delta = if current >= previous {
         current - previous
     } else {
-        // RAPL counter wrapped around (32-bit or implementation-specific max).
-        current.wrapping_sub(previous)
+        // Counter wrapped around at max_energy_range_uj.
+        (max_energy_uj - previous) + current
     };
     delta as f64 / 1_000_000.0 / dt_secs
 }
