@@ -83,8 +83,12 @@ fn format_memory(kb: u64) -> String {
 
 fn truncate(s: &str, max: usize) -> &str {
     if s.len() <= max {
-        s
-    } else {
-        &s[..max]
+        return s;
     }
+    // Find a valid UTF-8 boundary at or before `max`.
+    let mut end = max;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
 }

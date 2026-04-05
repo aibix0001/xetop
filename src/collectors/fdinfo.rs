@@ -8,6 +8,7 @@ use crate::model::ProcessGpuUsage;
 
 const ENGINE_NAMES: &[&str] = &["rcs", "ccs", "bcs", "vcs", "vecs"];
 
+#[derive(Clone)]
 struct ClientSnapshot {
     pid: u32,
     command: String,
@@ -99,11 +100,11 @@ impl FdinfoCollector {
 }
 
 fn scan_fdinfo() -> Vec<ClientSnapshot> {
-    let mut snapshots = Vec::new();
+    let mut snapshots: HashMap<u32, ClientSnapshot> = HashMap::new();
 
     let proc = Path::new("/proc");
     let Ok(entries) = fs::read_dir(proc) else {
-        return snapshots;
+        return Vec::new();
     };
 
     for entry in entries.flatten() {
@@ -121,21 +122,19 @@ fn scan_fdinfo() -> Vec<ClientSnapshot> {
         for fd_entry in fd_entries.flatten() {
             if let Some(snap) = parse_fdinfo_file(pid, &fd_entry.path()) {
                 // Deduplicate: keep the snapshot with the most GTT if same client_id.
-                if let Some(existing) = snapshots
-                    .iter_mut()
-                    .find(|s: &&mut ClientSnapshot| s.client_id == snap.client_id)
-                {
-                    if snap.gtt_kb > existing.gtt_kb {
-                        *existing = snap;
-                    }
-                } else {
-                    snapshots.push(snap);
-                }
+                snapshots
+                    .entry(snap.client_id)
+                    .and_modify(|existing| {
+                        if snap.gtt_kb > existing.gtt_kb {
+                            *existing = snap.clone();
+                        }
+                    })
+                    .or_insert(snap);
             }
         }
     }
 
-    snapshots
+    snapshots.into_values().collect()
 }
 
 fn parse_fdinfo_file(pid: u32, path: &Path) -> Option<ClientSnapshot> {
@@ -148,7 +147,7 @@ fn parse_fdinfo_file(pid: u32, path: &Path) -> Option<ClientSnapshot> {
 
     debug!("Found xe fdinfo for pid {pid}: {}", path.display());
 
-    let mut client_id = 0u32;
+    let mut client_id: Option<u32> = None;
     let mut gtt_kb = 0u64;
     let mut engine_cycles: HashMap<String, (u64, u64)> = HashMap::new();
 
@@ -156,7 +155,7 @@ fn parse_fdinfo_file(pid: u32, path: &Path) -> Option<ClientSnapshot> {
         let line = line.trim();
 
         if let Some(val) = line.strip_prefix("drm-client-id:") {
-            client_id = val.trim().parse().unwrap_or(0);
+            client_id = val.trim().parse().ok();
         } else if let Some(val) = line.strip_prefix("drm-total-gtt:") {
             // Format: "377400 KiB"
             gtt_kb = val
@@ -186,9 +185,7 @@ fn parse_fdinfo_file(pid: u32, path: &Path) -> Option<ClientSnapshot> {
         }
     }
 
-    if client_id == 0 {
-        return None;
-    }
+    let client_id = client_id?;
 
     // Read process command name.
     let command = fs::read_to_string(format!("/proc/{pid}/comm"))
