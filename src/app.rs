@@ -117,6 +117,9 @@ impl App {
         self.engines = self.pmu.collect();
         self.processes = self.fdinfo.collect();
 
+        // Compute per-GT utilization from best available source.
+        self.compute_gt_utilization();
+
         // Update sparkline histories.
         for engine in &self.engines {
             self.engine_history
@@ -132,6 +135,49 @@ impl App {
             self.selected_process = self.selected_process.min(self.processes.len() - 1);
         } else {
             self.selected_process = 0;
+        }
+    }
+
+    /// Compute per-GT utilization from PMU engines or aggregated fdinfo.
+    fn compute_gt_utilization(&mut self) {
+        // GT0 engines: rcs, ccs, bcs. GT1 engines: vcs, vecs.
+        let gt0_engines = ["rcs", "ccs", "bcs"];
+        let gt1_engines = ["vcs", "vecs"];
+
+        for gt in &mut self.gpu.gts {
+            let engine_names: &[&str] = if gt.id == 0 {
+                &gt0_engines
+            } else {
+                &gt1_engines
+            };
+
+            // Try PMU data first (most accurate).
+            if self.pmu_available {
+                let max_util = self
+                    .engines
+                    .iter()
+                    .filter(|e| engine_names.contains(&e.name.as_str()))
+                    .map(|e| e.utilization_pct)
+                    .fold(0.0_f64, f64::max);
+                gt.utilization_pct = max_util;
+            } else {
+                // Fallback: aggregate per-process fdinfo utilization.
+                // Sum each engine across all processes, take the max engine.
+                let mut engine_totals: std::collections::HashMap<&str, f64> =
+                    std::collections::HashMap::new();
+                for proc in &self.processes {
+                    for (name, pct) in &proc.engine_utils {
+                        if engine_names.contains(&name.as_str()) {
+                            *engine_totals.entry(name.as_str()).or_default() += pct;
+                        }
+                    }
+                }
+                gt.utilization_pct = engine_totals
+                    .values()
+                    .copied()
+                    .fold(0.0_f64, f64::max)
+                    .clamp(0.0, 100.0);
+            }
         }
     }
 
