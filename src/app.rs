@@ -66,6 +66,7 @@ pub struct App {
     pub selected_process: usize,
     pub sort_column: SortColumn,
     pub sort_reverse: bool,
+    pub show_help: bool,
     /// Per-engine sparkline history, keyed by engine name.
     pub engine_history: HashMap<String, RingBuffer>,
     /// NPU utilization history.
@@ -98,6 +99,7 @@ impl App {
             selected_process: 0,
             sort_column: SortColumn::Rcs,
             sort_reverse: true, // highest first by default
+            show_help: false,
             engine_history: HashMap::new(),
             npu_history: RingBuffer::new(HISTORY_LEN),
             sysfs,
@@ -187,6 +189,9 @@ impl App {
                             self.selected_process =
                                 (self.selected_process + 1).min(self.processes.len() - 1);
                         }
+                    }
+                    KeyCode::Char('?') => {
+                        self.show_help = !self.show_help;
                     }
                     KeyCode::Char('s') => {
                         self.sort_column = self.sort_column.next();

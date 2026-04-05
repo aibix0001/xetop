@@ -39,3 +39,48 @@ impl RingBuffer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_buffer() {
+        let buf = RingBuffer::new(5);
+        assert_eq!(buf.to_vec(), Vec::<u64>::new());
+    }
+
+    #[test]
+    fn partial_fill() {
+        let mut buf = RingBuffer::new(5);
+        buf.push(10.0);
+        buf.push(20.0);
+        buf.push(30.0);
+        assert_eq!(buf.to_vec(), vec![10, 20, 30]);
+    }
+
+    #[test]
+    fn full_wrap() {
+        let mut buf = RingBuffer::new(3);
+        buf.push(1.0);
+        buf.push(2.0);
+        buf.push(3.0);
+        buf.push(4.0); // overwrites 1
+        assert_eq!(buf.to_vec(), vec![2, 3, 4]);
+    }
+
+    #[test]
+    fn clamps_to_100() {
+        let mut buf = RingBuffer::new(3);
+        buf.push(150.0);
+        buf.push(-10.0);
+        assert_eq!(buf.to_vec(), vec![100, 0]);
+    }
+
+    #[test]
+    fn zero_capacity_guarded() {
+        let mut buf = RingBuffer::new(0);
+        buf.push(42.0);
+        assert_eq!(buf.to_vec(), vec![42]);
+    }
+}

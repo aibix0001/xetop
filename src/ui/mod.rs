@@ -1,5 +1,6 @@
 pub mod engine_panel;
 pub mod gpu_panel;
+pub mod help_overlay;
 pub mod npu_panel;
 pub mod power_bar;
 pub mod process_table;
@@ -72,6 +73,11 @@ pub fn draw(frame: &mut Frame, app: &App) {
         app.sort_column,
         app.sort_reverse,
     );
+
+    // Help overlay
+    if app.show_help {
+        help_overlay::draw(frame);
+    }
 
     // Help bar
     let help = Line::from(vec![
