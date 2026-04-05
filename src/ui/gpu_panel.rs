@@ -23,16 +23,21 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
     let chunks = ratatui::layout::Layout::vertical(
         gpu.gts
             .iter()
-            .flat_map(|_| [ratatui::layout::Constraint::Length(1), ratatui::layout::Constraint::Length(1)])
+            .flat_map(|_| {
+                [
+                    ratatui::layout::Constraint::Length(1),
+                    ratatui::layout::Constraint::Length(1),
+                ]
+            })
             .collect::<Vec<_>>(),
     )
     .split(inner);
 
     for (i, gt) in gpu.gts.iter().enumerate() {
         let row_freq = i * 2;
-        let row_c6 = i * 2 + 1;
+        let row_util = i * 2 + 1;
 
-        if row_c6 >= chunks.len() {
+        if row_util >= chunks.len() {
             break;
         }
 
@@ -44,7 +49,10 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
             "media"
         };
         let freq_line = Line::from(vec![
-            Span::styled(format!(" {label} ({engines}): "), Style::default().fg(Color::White)),
+            Span::styled(
+                format!(" {label} ({engines}): "),
+                Style::default().fg(Color::White),
+            ),
             Span::styled(
                 format!("{:>4}", gt.act_freq_mhz),
                 Style::default().fg(if gt.act_freq_mhz > 0 {
@@ -54,19 +62,22 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
                 }),
             ),
             Span::raw(format!("/{} MHz", gt.max_freq_mhz)),
-            Span::styled(
-                format!("  [{}]", gt.idle_status),
-                Style::default().fg(Color::DarkGray),
-            ),
         ]);
         frame.render_widget(Paragraph::new(freq_line), chunks[row_freq]);
 
-        // C6 residency gauge
-        let c6_pct = gt.c6_residency_pct.clamp(0.0, 100.0);
+        // Utilization gauge (100% - C6 idle residency)
+        let util_pct = (100.0 - gt.c6_residency_pct).clamp(0.0, 100.0);
+        let color = if util_pct >= 80.0 {
+            Color::Red
+        } else if util_pct >= 50.0 {
+            Color::Yellow
+        } else {
+            Color::Green
+        };
         let gauge = Gauge::default()
-            .gauge_style(Style::default().fg(Color::Blue))
-            .label(format!(" C6: {c6_pct:5.1}%"))
-            .ratio(c6_pct / 100.0);
-        frame.render_widget(gauge, chunks[row_c6]);
+            .gauge_style(Style::default().fg(color))
+            .label(format!(" Util: {util_pct:5.1}%"))
+            .ratio(util_pct / 100.0);
+        frame.render_widget(gauge, chunks[row_util]);
     }
 }
