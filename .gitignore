@@ -1,0 +1,5 @@
+.claude/worktrees/
+target/
+.mcp.json
+opencode.json
+
