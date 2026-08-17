@@ -83,6 +83,14 @@ pub struct EngineMetrics {
     pub utilization_pct: f64,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct EngineSchedulerParams {
+    pub name: String,
+    pub timeslice_ms: u64,
+    pub preempt_timeout_ms: u64,
+    pub job_timeout_ms: u64,
+}
+
 #[derive(Debug, Default)]
 pub struct RaplState {
     pub pkg_watts: f64,

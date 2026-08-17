@@ -12,7 +12,7 @@ const HELP_TEXT: &str = "\
   r           Reverse sort order
 
   Data sources:
-    sysfs     GPU freq, C6 idle, NPU metrics (no privileges)
+    sysfs     GPU freq, C6 idle, NPU metrics, scheduler params
     PMU       Per-engine utilization (needs CAP_PERFMON)
     fdinfo    Per-process GPU usage (own procs or root)
     RAPL      Package/core/DRAM power (no privileges)";
