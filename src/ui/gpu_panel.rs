@@ -4,7 +4,7 @@ use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, Paragraph};
 
-use crate::model::GpuState;
+use crate::model::{GpuRuntimePmState, GpuState};
 
 pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
     let block = Block::default()
@@ -50,12 +50,28 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
         };
 
         // Profile range (eff_freq to p0_freq) if available
-        let mut freq_line = Line::from(vec![
-            Span::styled(
-                format!(" {label} ({engines}): "),
-                Style::default().fg(Color::White),
-            ),
-        ]);
+        let mut freq_line_spans: Vec<Span> = vec![Span::styled(
+            format!(" {label} ({engines})"),
+            Style::default().fg(Color::White),
+        )];
+
+        if let Some(pm_state) = &gpu.runtime_pm_state {
+            let pm_color = match pm_state {
+                GpuRuntimePmState::On => Color::Green,
+                GpuRuntimePmState::Suspend => Color::Yellow,
+                GpuRuntimePmState::SuspendNoIrq => Color::DarkGray,
+                GpuRuntimePmState::Resume => Color::Blue,
+                GpuRuntimePmState::Unknown(_) => Color::DarkGray,
+            };
+            freq_line_spans.push(Span::styled(
+                format!(" {}:", pm_state.as_str()),
+                Style::default().fg(pm_color),
+            ));
+        } else {
+            freq_line_spans.push(Span::raw(format!(" {label}: ")));
+        }
+
+        let mut freq_line = Line::from(freq_line_spans);
 
         if gt.eff_freq_mhz > 0 && gt.p0_freq_mhz > 0 {
             freq_line.spans.push(Span::raw(format!(
