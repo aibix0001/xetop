@@ -5,7 +5,7 @@ use anyhow::Result;
 use log::warn;
 
 use super::{read_sysfs, read_sysfs_value};
-use crate::model::{GpuState, GtState, NpuState};
+use crate::model::{GpuRuntimePmState, GpuState, GtState, NpuState};
 
 pub struct SysfsCollector {
     drm_device_path: PathBuf,
@@ -97,7 +97,11 @@ impl SysfsCollector {
 
         self.compute_c6_deltas(&mut gts);
 
-        GpuState { gts }
+        let runtime_pm_state = read_sysfs(&self.drm_device_path.join("power/runtime_status"))
+            .ok()
+            .map(|s| GpuRuntimePmState::from_str(s.trim()));
+
+        GpuState { gts, runtime_pm_state }
     }
 
     fn compute_c6_deltas(&mut self, gts: &mut [GtState]) {

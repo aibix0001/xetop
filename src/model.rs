@@ -1,9 +1,49 @@
 /// Shared data types for xetop.
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum GpuRuntimePmState {
+    #[default]
+    On,
+    Suspend,
+    SuspendNoIrq,
+    Resume,
+    Unknown(String),
+}
+
+impl GpuRuntimePmState {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "on" => Self::On,
+            "suspend" => Self::Suspend,
+            "suspend-noirq" => Self::SuspendNoIrq,
+            "resume" => Self::Resume,
+            _ => Self::Unknown(s.to_string()),
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::On => "on",
+            Self::Suspend => "suspend",
+            Self::SuspendNoIrq => "suspend-noirq",
+            Self::Resume => "resume",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+}
+
+impl std::fmt::Display for GpuRuntimePmState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", self.as_str())
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct GpuState {
     /// Per-GT state (GT0 = render/compute, GT1 = media).
     pub gts: Vec<GtState>,
+    /// Runtime PM state from device/power/runtime_status (kernel 7.x+).
+    pub runtime_pm_state: Option<GpuRuntimePmState>,
 }
 
 #[derive(Debug, Default, Clone)]
