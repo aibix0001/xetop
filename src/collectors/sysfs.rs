@@ -5,7 +5,10 @@ use anyhow::Result;
 use log::warn;
 
 use super::{read_sysfs, read_sysfs_value};
-use crate::model::{GpuRuntimePmState, GpuState, GtState, NpuState};
+use crate::model::{EngineSchedulerParams, GpuRuntimePmState, GpuState, GtState, NpuState};
+
+/// Known xe engine names.
+const KNOWN_ENGINES: &[&str] = &["rcs", "ccs", "vcs", "vecs", "bcs"];
 
 pub struct SysfsCollector {
     drm_device_path: PathBuf,
@@ -137,6 +140,47 @@ impl SysfsCollector {
         self.prev_gpu_timestamp = Some(now);
     }
 
+    /// Discover engine scheduler params from sysfs.
+    pub fn collect_scheduler_params(&self) -> Vec<EngineSchedulerParams> {
+        let mut params = Vec::new();
+
+        for &gt_id in &self.gt_ids {
+            let gt_path = self.drm_device_path.join(format!("tile0/gt{gt_id}"));
+            let engine_path = gt_path.join("engine");
+
+            if !engine_path.is_dir() {
+                continue;
+            }
+
+            let engines = match std::fs::read_dir(&engine_path) {
+                Ok(entries) => entries.filter_map(|e| e.ok()).collect::<Vec<_>>(),
+                Err(_) => continue,
+            };
+
+            for entry in engines {
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+
+                if !KNOWN_ENGINES.iter().any(|e| *e == name.as_ref()) {
+                    continue;
+                }
+
+                let sched_path = entry.path().join("sched");
+
+                let entry_params = EngineSchedulerParams {
+                    name: name.to_string(),
+                    timeslice_ms: read_ns(&sched_path.join("timeslice_ns")),
+                    preempt_timeout_ms: read_ns(&sched_path.join("preempt_timeout_ns")),
+                    job_timeout_ms: read_ns(&sched_path.join("timeout_ns")),
+                };
+
+                params.push(entry_params);
+            }
+        }
+
+        params
+    }
+
     pub fn collect_npu(&mut self) -> NpuState {
         if !self.npu_available {
             return NpuState::default();
@@ -179,6 +223,11 @@ impl SysfsCollector {
             power_state,
         }
     }
+}
+
+/// Read a file containing a nanosecond value and convert to milliseconds.
+fn read_ns(path: &Path) -> u64 {
+    read_sysfs_value::<u64>(path).map(|v| v / 1_000_000).unwrap_or(0)
 }
 
 /// Find the xe DRM device path (e.g. /sys/class/drm/card0/device).

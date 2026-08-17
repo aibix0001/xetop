@@ -21,6 +21,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Constraint::Length(6),  // GPU + NPU panels side by side
         Constraint::Length(1),  // power bar
         Constraint::Length(7),  // engine panel
+        Constraint::Length(4),  // scheduler params
         Constraint::Min(5),    // process table
         Constraint::Length(1),  // help bar
     ])
@@ -62,6 +63,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         &app.engines,
         app.pmu_available,
         &app.engine_history,
+        &app.scheduler_params,
     );
 
     // Process table

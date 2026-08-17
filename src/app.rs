@@ -9,7 +9,7 @@ use crate::collectors::pmu::PmuCollector;
 use crate::collectors::rapl::RaplCollector;
 use crate::collectors::sysfs::SysfsCollector;
 use crate::history::RingBuffer;
-use crate::model::{EngineMetrics, GpuState, NpuState, ProcessGpuUsage, RaplState};
+use crate::model::{EngineMetrics, EngineSchedulerParams, GpuState, NpuState, ProcessGpuUsage, RaplState};
 
 const HISTORY_LEN: usize = 60;
 
@@ -49,6 +49,7 @@ pub struct App {
     pub rapl: RaplState,
     pub processes: Vec<ProcessGpuUsage>,
     pub engines: Vec<EngineMetrics>,
+    pub scheduler_params: Vec<EngineSchedulerParams>,
     pub pmu_available: bool,
     pub selected_process: usize,
     pub sort_column: SortColumn,
@@ -82,6 +83,7 @@ impl App {
             rapl: RaplState::default(),
             processes: Vec::new(),
             engines: Vec::new(),
+            scheduler_params: Vec::new(),
             pmu_available,
             selected_process: 0,
             sort_column: SortColumn::Rcs,
@@ -102,6 +104,7 @@ impl App {
         self.npu = self.sysfs.collect_npu();
         self.rapl = self.rapl_collector.collect();
         self.engines = self.pmu.collect();
+        self.scheduler_params = self.sysfs.collect_scheduler_params();
         self.processes = self.fdinfo.collect();
 
         // Compute per-GT utilization from best available source.

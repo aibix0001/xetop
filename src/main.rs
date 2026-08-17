@@ -157,6 +157,18 @@ fn run_once(app: &mut App) -> Result<()> {
         println!();
     }
 
+    // Engine scheduler params
+    if !app.scheduler_params.is_empty() {
+        println!("Scheduler parameters:");
+        for p in &app.scheduler_params {
+            println!(
+                "  {:>10}: {}us slice, {}us preempt, {}us job",
+                p.name, p.timeslice_ms * 1000, p.preempt_timeout_ms * 1000, p.job_timeout_ms * 1000
+            );
+        }
+        println!();
+    }
+
     // Processes
     if !app.processes.is_empty() {
         println!(
