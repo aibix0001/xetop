@@ -67,6 +67,26 @@ impl SysfsCollector {
                 act_freq_mhz: read_sysfs_value(&freq_path.join("act_freq")).unwrap_or(0),
                 min_freq_mhz: read_sysfs_value(&freq_path.join("min_freq")).unwrap_or(0),
                 max_freq_mhz: read_sysfs_value(&freq_path.join("max_freq")).unwrap_or(0),
+                eff_freq_mhz: read_sysfs_value::<u32>(&freq_path.join("rp_eff_freq"))
+                    .map(|v: u32| v / 1000)
+                    .unwrap_or(0),
+                p0_freq_mhz: read_sysfs_value::<u32>(&freq_path.join("rp0_freq"))
+                    .map(|v: u32| v / 1000)
+                    .unwrap_or(0),
+                power_profile: read_sysfs(&gt_path.join("power"))
+                    .map(|s| {
+                        let s = s.trim().to_string();
+                        if s.is_empty() {
+                            s
+                        } else {
+                            // Strip surrounding brackets if present
+                            s.strip_prefix('[')
+                                .and_then(|s| s.strip_suffix(']'))
+                                .unwrap_or(&s)
+                                .to_string()
+                        }
+                    })
+                    .unwrap_or_default(),
                 idle_status: read_sysfs(&idle_path.join("idle_status")).unwrap_or_default(),
                 idle_residency_ms: read_sysfs_value(&idle_path.join("idle_residency_ms"))
                     .unwrap_or(0),
