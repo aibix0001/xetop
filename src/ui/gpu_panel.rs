@@ -48,21 +48,34 @@ pub fn draw(frame: &mut Frame, area: Rect, gpu: &GpuState) {
         } else {
             "media"
         };
-        let freq_line = Line::from(vec![
+
+        // Profile range (eff_freq to p0_freq) if available
+        let mut freq_line = Line::from(vec![
             Span::styled(
                 format!(" {label} ({engines}): "),
                 Style::default().fg(Color::White),
             ),
-            Span::styled(
-                format!("{:>4}", gt.act_freq_mhz),
-                Style::default().fg(if gt.act_freq_mhz > 0 {
-                    Color::Green
-                } else {
-                    Color::DarkGray
-                }),
-            ),
-            Span::raw(format!("/{} MHz", gt.max_freq_mhz)),
         ]);
+
+        if gt.eff_freq_mhz > 0 && gt.p0_freq_mhz > 0 {
+            freq_line.spans.push(Span::raw(format!(
+                "{}-{} ",
+                gt.eff_freq_mhz, gt.p0_freq_mhz
+            )));
+        }
+
+        freq_line.spans.push(Span::styled(
+            format!("{:>4} MHz", gt.cur_freq_mhz),
+            Style::default().fg(if gt.cur_freq_mhz > 0 {
+                Color::Green
+            } else {
+                Color::DarkGray
+            }),
+        ));
+
+        if !gt.power_profile.is_empty() {
+            freq_line.spans.push(Span::raw(format!(" [{}]", gt.power_profile)));
+        }
         frame.render_widget(Paragraph::new(freq_line), chunks[row_freq]);
 
         // Utilization gauge (100% - C6 idle residency)

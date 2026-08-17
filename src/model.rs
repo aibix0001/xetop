@@ -13,6 +13,12 @@ pub struct GtState {
     pub act_freq_mhz: u32,
     pub min_freq_mhz: u32,
     pub max_freq_mhz: u32,
+    /// Efficient frequency from freq0/rp_eff_freq (kHz → MHz).
+    pub eff_freq_mhz: u32,
+    /// P0 turbo frequency from freq0/rp0_freq (kHz → MHz).
+    pub p0_freq_mhz: u32,
+    /// Current power profile from power (e.g. "default", [performance], [power saver]).
+    pub power_profile: String,
     pub idle_status: String,
     /// GT utilization percentage (best available source).
     pub utilization_pct: f64,
