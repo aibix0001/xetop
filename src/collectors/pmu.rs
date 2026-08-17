@@ -56,7 +56,6 @@ impl Drop for PerfEventFd {
 struct EngineCounters {
     name: String,
     label: String,
-    gt_id: u32,
     active_fd: PerfEventFd,
     total_fd: PerfEventFd,
 }
@@ -106,7 +105,6 @@ impl PmuCollector {
             engines.push(EngineCounters {
                 name: name.to_string(),
                 label: label.to_string(),
-                gt_id,
                 active_fd,
                 total_fd,
             });
@@ -126,10 +124,9 @@ impl PmuCollector {
         if !self.available {
             return ENGINES
                 .iter()
-                .map(|&(name, label, gt_id, _, _)| EngineMetrics {
+                .map(|&(name, label, _, _, _)| EngineMetrics {
                     name: name.to_string(),
                     label: label.to_string(),
-                    gt_id,
                     ..Default::default()
                 })
                 .collect();
@@ -160,9 +157,6 @@ impl PmuCollector {
             metrics.push(EngineMetrics {
                 name: engine.name.clone(),
                 label: engine.label.clone(),
-                gt_id: engine.gt_id,
-                active_cycles: active,
-                total_cycles: total,
                 utilization_pct,
             });
         }

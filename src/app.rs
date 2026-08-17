@@ -26,19 +26,6 @@ pub enum SortColumn {
 }
 
 impl SortColumn {
-    pub fn label(&self) -> &'static str {
-        match self {
-            Self::Pid => "PID",
-            Self::Command => "CMD",
-            Self::Gtt => "GTT",
-            Self::Rcs => "RCS",
-            Self::Vcs => "VCS",
-            Self::Ccs => "CCS",
-            Self::Bcs => "BCS",
-            Self::Vecs => "VECS",
-        }
-    }
-
     fn next(&self) -> Self {
         match self {
             Self::Pid => Self::Command,

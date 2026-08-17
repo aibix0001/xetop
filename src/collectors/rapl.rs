@@ -81,9 +81,6 @@ impl RaplCollector {
             pkg_watts,
             core_watts,
             dram_watts,
-            pkg_energy_uj: pkg_uj,
-            core_energy_uj: core_uj,
-            dram_energy_uj: dram_uj,
         }
     }
 }

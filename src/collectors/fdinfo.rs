@@ -40,7 +40,7 @@ impl FdinfoCollector {
 
     pub fn collect(&mut self) -> Vec<ProcessGpuUsage> {
         self.tick_counter += 1;
-        if self.tick_counter % self.scan_interval != 0 && !self.cached.is_empty() {
+        if !self.tick_counter.is_multiple_of(self.scan_interval) && !self.cached.is_empty() {
             return self.cached.clone();
         }
 
@@ -74,7 +74,6 @@ impl FdinfoCollector {
                 results.push(ProcessGpuUsage {
                     pid: snap.pid,
                     command: snap.command.clone(),
-                    client_id: snap.client_id,
                     gtt_kb: snap.gtt_kb,
                     engine_utils,
                 });
@@ -159,7 +158,6 @@ fn parse_fdinfo_file(pid: u32, path: &Path) -> Option<ClientSnapshot> {
         } else if let Some(val) = line.strip_prefix("drm-total-gtt:") {
             // Format: "377400 KiB"
             gtt_kb = val
-                .trim()
                 .split_whitespace()
                 .next()
                 .and_then(|v| v.parse().ok())

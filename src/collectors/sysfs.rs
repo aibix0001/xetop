@@ -65,7 +65,6 @@ impl SysfsCollector {
                 id: gt_id,
                 cur_freq_mhz: read_sysfs_value(&freq_path.join("cur_freq")).unwrap_or(0),
                 act_freq_mhz: read_sysfs_value(&freq_path.join("act_freq")).unwrap_or(0),
-                min_freq_mhz: read_sysfs_value(&freq_path.join("min_freq")).unwrap_or(0),
                 max_freq_mhz: read_sysfs_value(&freq_path.join("max_freq")).unwrap_or(0),
                 eff_freq_mhz: read_sysfs_value::<u32>(&freq_path.join("rp_eff_freq"))
                     .map(|v: u32| v / 1000)
@@ -87,7 +86,6 @@ impl SysfsCollector {
                         }
                     })
                     .unwrap_or_default(),
-                idle_status: read_sysfs(&idle_path.join("idle_status")).unwrap_or_default(),
                 idle_residency_ms: read_sysfs_value(&idle_path.join("idle_residency_ms"))
                     .unwrap_or(0),
                 utilization_pct: 0.0,
@@ -173,7 +171,6 @@ impl SysfsCollector {
             cur_freq_mhz,
             max_freq_mhz,
             utilization_pct,
-            busy_time_us,
             memory_bytes,
             power_state,
         }
