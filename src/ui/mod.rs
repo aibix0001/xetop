@@ -20,8 +20,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Constraint::Length(1),  // title/status bar
         Constraint::Length(6),  // GPU + NPU panels side by side
         Constraint::Length(1),  // power bar
-        Constraint::Length(7),  // engine panel
-        Constraint::Length(4),  // scheduler params
+        Constraint::Length(7),  // engine panel (+ scheduler params inside)
         Constraint::Min(5),    // process table
         Constraint::Length(1),  // help bar
     ])
